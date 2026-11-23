@@ -1,11 +1,21 @@
 from datetime import datetime
 import os
+import gspread
 import pandas as pd
 import streamlit as st
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CSV_FILE = os.path.join(BASE_DIR, 'workout_log.csv')
+# CSV_FILE = os.path.join(BASE_DIR, 'workout_log.csv')
+KEY_FILE = os.path.join(BASE_DIR, 'secret_key.json')
 
+# googleスプレッドシートに接続する関数
+@st.cache_resource
+def get_worksheet():
+    gc = gspread.service_account(filename=KEY_FILE)
+    sh = gc.open('筋トレ記録')
+    return sh.sheet1
+
+worksheet = get_worksheet()
 
 st.title('筋トレ記録')
 exercises= [
@@ -21,9 +31,10 @@ exercises= [
     'バックエクステンション'
 ]
 
-# CSV読み込み
-if os.path.exists(CSV_FILE):
-    df = pd.read_csv(CSV_FILE)
+# スプレッドシート読み込み
+records = worksheet.get_all_records()
+if records:
+    df = pd.DataFrame(records)
 else:
     df = pd.DataFrame(columns=['日時', '種目', '重量', '回数', 'セット数'])
 
@@ -82,20 +93,17 @@ with st.form('record_form', clear_on_submit=False):
 
 # 保存処理
 if submitted:
+    now_str = datetime.now().strftime('%Y-%m-%d %H:%M')
+    worksheet.append_row([now_str, exercise, float(weight), int(reps), int(sets)])
+
     new_data = pd.DataFrame([{
-        '日時': datetime.now().strftime('%Y-%m-%d %H:%M'),
+        '日時': now_str,
         '種目': exercise,
-        '重量': weight,
-        '回数': reps,
-        'セット数': sets,
+        '重量': float(weight),
+        '回数': int(reps),
+        'セット数': int(sets),
     }])
-
-    if os.path.exists(CSV_FILE):
-        new_data.to_csv(CSV_FILE, mode='a', header=False, index=False)
-    else:
-        new_data.to_csv(CSV_FILE, index=False)
-
-    df = pd.read_csv(CSV_FILE)
+    df = pd.concat([df, new_data], ignore_index=True)
 
     st.success(f'記録しました：{exercise} {weight}kg × {reps}回 × {sets}セット')
 
