@@ -1,4 +1,5 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import os
 import gspread
 import pandas as pd
@@ -15,7 +16,7 @@ def get_worksheet():
         gc = gspread.service_account(filename=KEY_FILE)
     else:
         gc = gspread.service_account_from_dict(st.secrets['gcp_service_account'])
-        
+
     sh = gc.open('筋トレ記録')
     return sh.sheet1
 
@@ -97,7 +98,7 @@ with st.form('record_form', clear_on_submit=False):
 
 # 保存処理
 if submitted:
-    now_str = datetime.now().strftime('%Y-%m-%d %H:%M')
+    now_str = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y-%m-%d %H:%M")
     worksheet.append_row([now_str, exercise, float(weight), int(reps), int(sets)])
 
     new_data = pd.DataFrame([{
