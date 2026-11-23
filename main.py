@@ -11,7 +11,11 @@ KEY_FILE = os.path.join(BASE_DIR, 'secret_key.json')
 # googleスプレッドシートに接続する関数
 @st.cache_resource
 def get_worksheet():
-    gc = gspread.service_account(filename=KEY_FILE)
+    if os.path.exists(KEY_FILE):
+        gc = gspread.service_account(filename=KEY_FILE)
+    else:
+        gc = gspread.service_account_from_dict(st.secrets['gcp_service_account'])
+        
     sh = gc.open('筋トレ記録')
     return sh.sheet1
 
